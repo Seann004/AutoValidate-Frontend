@@ -127,7 +127,7 @@ const Progress = ({ value, className = "" }: {
   value: number
   className?: string 
 }) => (
-  <div className={`w-full bg-gray-200 rounded-full h-3 overflow-hidden ${className}`}>
+  <div className={`w-full bg-white rounded-full h-3 overflow-hidden border border-gray-200 ${className}`}>
     <div 
       className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-700 ease-out shadow-sm relative"
       style={{ width: `${value}%` }}
@@ -237,7 +237,7 @@ export function InsuranceData() {
   // ============================================================================
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-200 p-4">
       <div className="max-w-6xl mx-auto">
         
         {/* Header Section */}
@@ -253,10 +253,10 @@ export function InsuranceData() {
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 transform ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 transform border-2 ${
                     currentStep >= step.id 
-                      ? "bg-blue-600 text-white scale-110 shadow-lg" 
-                      : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                      ? "bg-blue-600 text-white scale-110 shadow-lg border-blue-600" 
+                      : "bg-white text-gray-600 hover:bg-gray-50 border-gray-300"
                   }`}
                 >
                   {currentStep > step.id ? (
