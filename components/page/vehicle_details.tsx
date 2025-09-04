@@ -10,7 +10,7 @@ const Input = ({ className = "", ...props }: React.InputHTMLAttributes<HTMLInput
   className?: string 
 }) => (
   <input 
-    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${className}`} 
+    className={`w-full px-4 py-3 border-2 border-gray-300 rounded-lg input-animated focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 hover:border-blue-400 ${className}`} 
     {...props} 
   />
 )
@@ -157,7 +157,7 @@ const VEHICLE_DATABASE: VehicleData[] = [
     { brand: "Ford", model: "Ranger", yearStart: 2012, yearEnd: 2025 }
 ] as const
 
-const FUZZY_MATCH_THRESHOLD = 0.4
+const FUZZY_MATCH_THRESHOLD = 0.3
 const MAX_SUGGESTIONS = 3
 const SUGGESTION_MIN_LENGTH = 0
 const MODEL_MIN_LENGTH = 2
@@ -192,15 +192,53 @@ const fuzzyMatch = (input: string, target: string): number => {
   // Contains match
   if (targetLower.includes(inputLower)) return 0.8
 
-  // Character similarity
-  let matches = 0
-  const minLength = Math.min(inputLower.length, targetLower.length)
-  
-  for (let i = 0; i < minLength; i++) {
-    if (inputLower[i] === targetLower[i]) matches++
+  // Calculate Levenshtein distance for better typo handling
+  const levenshteinDistance = (a: string, b: string): number => {
+    const matrix = Array(a.length + 1).fill(null).map(() => Array(b.length + 1).fill(null))
+    
+    for (let i = 0; i <= a.length; i++) matrix[i][0] = i
+    for (let j = 0; j <= b.length; j++) matrix[0][j] = j
+    
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1, // deletion
+          matrix[i][j - 1] + 1, // insertion
+          matrix[i - 1][j - 1] + substitutionCost // substitution
+        )
+      }
+    }
+    
+    return matrix[a.length][b.length]
   }
 
-  return matches / Math.max(inputLower.length, targetLower.length)
+  // Calculate similarity based on edit distance
+  const maxLength = Math.max(inputLower.length, targetLower.length)
+  const distance = levenshteinDistance(inputLower, targetLower)
+  const similarity = 1 - (distance / maxLength)
+
+  // Bonus for matching start of word
+  if (targetLower.startsWith(inputLower)) return Math.max(similarity, 0.7)
+
+  // Bonus for character subsequence matching (handles missing characters)
+  let subsequenceMatches = 0
+  let targetIndex = 0
+  
+  for (let i = 0; i < inputLower.length; i++) {
+    while (targetIndex < targetLower.length && targetLower[targetIndex] !== inputLower[i]) {
+      targetIndex++
+    }
+    if (targetIndex < targetLower.length) {
+      subsequenceMatches++
+      targetIndex++
+    }
+  }
+
+  const subsequenceScore = subsequenceMatches / inputLower.length
+  
+  // Return the best score from all matching strategies
+  return Math.max(similarity, subsequenceScore * 0.6)
 }
 
 const generateYearSuggestions = (): string[] => {
@@ -234,6 +272,10 @@ export function VehicleDetailsStep({ formData, updateFormData }: VehicleDetailsS
   const generateBrandSuggestions = (input: string): string[] => {
     if (input.length <= SUGGESTION_MIN_LENGTH) return []
 
+    // Check for exact match - if found, don't show suggestions
+    const exactMatch = carBrands.find(brand => brand.toLowerCase() === input.toLowerCase())
+    if (exactMatch) return []
+
     return carBrands
       .map((brand) => ({ brand, score: fuzzyMatch(input, brand) }))
       .filter((item) => item.score > FUZZY_MATCH_THRESHOLD)
@@ -252,6 +294,10 @@ export function VehicleDetailsStep({ formData, updateFormData }: VehicleDetailsS
     if (input.length <= SUGGESTION_MIN_LENGTH) {
       return brandModels.slice(0, MAX_SUGGESTIONS)
     }
+
+    // Check for exact match - if found, don't show suggestions
+    const exactMatch = brandModels.find(model => model.toLowerCase() === input.toLowerCase())
+    if (exactMatch) return []
 
     const filteredModels = brandModels
       .map((model) => ({ model, score: fuzzyMatch(input, model) }))
@@ -288,7 +334,7 @@ export function VehicleDetailsStep({ formData, updateFormData }: VehicleDetailsS
 
     const exactMatch = brandModels.find((m) => m.toLowerCase() === model.toLowerCase())
     if (!exactMatch) {
-      return `"${model}" might not be a valid model for ${brand}. See suggestions below.`
+      return `"${model}" might not be a valid model for ${brand}. See suggestions above.`
     }
 
     return ""
@@ -392,17 +438,17 @@ export function VehicleDetailsStep({ formData, updateFormData }: VehicleDetailsS
     if (suggestions.length === 0) return null
 
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 space-y-3 animate-fade-in shadow-lg">
         <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-          <p className="text-sm font-medium text-blue-700">{label}</p>
+          <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse-gentle"></div>
+          <p className="text-sm font-semibold text-blue-800">{label}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3 animate-stagger">
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               onClick={() => onSelect(suggestion)}
-              className="px-3 py-1.5 text-sm bg-white border border-blue-300 text-blue-700 rounded-md hover:bg-blue-100 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow-md"
+              className="px-4 py-2 text-sm bg-white border-2 border-blue-300 text-blue-700 rounded-lg hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-500 hover:text-white hover:border-blue-500 transition-all duration-300 shadow-md hover:shadow-xl transform hover:scale-105 active:scale-95 button-glow"
             >
               {suggestion}
             </button>
@@ -432,9 +478,10 @@ export function VehicleDetailsStep({ formData, updateFormData }: VehicleDetailsS
   // ============================================================================
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-stagger">
       {/* Vehicle Brand */}
-      <div className="space-y-2">
+      <div className="space-y-2 animate-float"
+           style={{animationDelay: '0.1s'}}>
         <Label htmlFor="vehicleBrand">Vehicle Brand</Label>
         <Input
           id="vehicleBrand"
@@ -446,7 +493,8 @@ export function VehicleDetailsStep({ formData, updateFormData }: VehicleDetailsS
       </div>
 
       {/* Vehicle Model */}
-      <div className="space-y-2">
+      <div className="space-y-2 animate-float"
+           style={{animationDelay: '0.3s'}}>
         <Label htmlFor="vehicleModel">Vehicle Model</Label>
         <Input
           id="vehicleModel"

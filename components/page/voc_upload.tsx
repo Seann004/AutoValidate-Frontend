@@ -192,10 +192,10 @@ export function VocUploadStep({ formData, updateFormData }: VocUploadStepProps) 
   }
 
   const getDragZoneClasses = (): string => {
-    const baseClasses = "relative border-2 border-dashed rounded-lg p-8 text-center transition-colors"
+    const baseClasses = "relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ease-in-out transform"
     const dragClasses = isDragOver 
-      ? "border-primary bg-primary/5" 
-      : "border-muted-foreground/25 hover:border-primary/50"
+      ? "border-blue-500 bg-blue-50 scale-105 shadow-lg" 
+      : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 hover:scale-102"
     
     return `${baseClasses} ${dragClasses}`
   }
@@ -211,10 +211,25 @@ export function VocUploadStep({ formData, updateFormData }: VocUploadStepProps) 
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-      <h4 className="text-lg font-medium mb-2">Upload Vehicle Ownership Certificate</h4>
-      <p className="text-muted-foreground mb-4">Drag and drop your file here, or click to browse</p>
-      <p className="text-sm text-muted-foreground mb-4">
+      <div className={`transition-all duration-300 ${isDragOver ? 'transform scale-110' : ''}`}>
+        <Upload className={`mx-auto h-12 w-12 mb-4 transition-colors duration-300 ${
+          isDragOver ? 'text-blue-600' : 'text-gray-400'
+        }`} />
+      </div>
+      
+      <h4 className={`text-lg font-medium mb-2 transition-colors duration-300 ${
+        isDragOver ? 'text-blue-600' : 'text-gray-700'
+      }`}>
+        {isDragOver ? 'Drop your file here!' : 'Upload Vehicle Ownership Certificate'}
+      </h4>
+      
+      <p className={`text-sm mb-4 transition-colors duration-300 ${
+        isDragOver ? 'text-blue-600' : 'text-gray-500'
+      }`}>
+        {isDragOver ? 'Release to upload' : 'Drag and drop your file here, or click to browse'}
+      </p>
+      
+      <p className="text-xs text-gray-400 mb-4">
         Supported formats: PDF, JPG, PNG (Max 5MB)
       </p>
 
@@ -225,9 +240,19 @@ export function VocUploadStep({ formData, updateFormData }: VocUploadStepProps) 
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
       />
 
-      <Button variant="outline" className="pointer-events-none bg-transparent">
-        Choose File
+      <Button 
+        variant="outline" 
+        className={`pointer-events-none transition-all duration-300 ${
+          isDragOver ? 'bg-blue-100 border-blue-300 text-blue-600' : 'bg-white'
+        }`}
+      >
+        {isDragOver ? 'Drop File' : 'Choose File'}
       </Button>
+      
+      {/* Animated pulse effect when dragging */}
+      {isDragOver && (
+        <div className="absolute inset-0 rounded-lg border-2 border-blue-500 animate-pulse pointer-events-none" />
+      )}
     </div>
   )
 
@@ -235,20 +260,26 @@ export function VocUploadStep({ formData, updateFormData }: VocUploadStepProps) 
     if (!formData.vocFile) return null
     
     return (
-      <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+      <div className="animate-in slide-in-from-top-2 duration-500 flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg shadow-sm">
         <div className="flex items-center space-x-3">
-          <CheckCircle className="h-5 w-5 text-green-600" />
+          <div className="relative">
+            <CheckCircle className="h-6 w-6 text-green-600 animate-in zoom-in duration-300" />
+            <div className="absolute inset-0 rounded-full bg-green-600 animate-ping opacity-25" />
+          </div>
           <FileText className="h-8 w-8 text-blue-600" />
           <div>
             <p className="font-medium text-green-800">{formData.vocFile.name}</p>
             <p className="text-sm text-green-600">{formatFileSize(formData.vocFile.size)} MB</p>
+            <div className="w-32 h-1 bg-green-200 rounded-full mt-1 overflow-hidden">
+              <div className="h-full bg-green-500 rounded-full animate-in slide-in-from-left duration-700" />
+            </div>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={removeFile}
-          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+          className="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors duration-200"
         >
           <X className="h-4 w-4" />
         </Button>

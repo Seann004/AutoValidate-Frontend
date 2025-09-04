@@ -382,7 +382,7 @@ export function PersonalDetailsStep({ formData, updateFormData }: PersonalDetail
           id="state"
           value={formData.state}
           readOnly
-          placeholder="Auto-filled from postcode"
+          placeholder="State"
           className="bg-muted"
         />
       </div>
