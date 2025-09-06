@@ -1,9 +1,9 @@
-# 🚗 Smart Vehicle Data Validation SDK & API  
+# 🚗 Developer-First Smart Vehicle Data Validation SDK & API (AutoValidate)
 ---
 
 ## 👥 Team Members  
-- 👨‍💻Shawn Chee
-- 👨‍💻Sean Sean
+- 👨‍💻Shawn Chee (Final-Year @ UM)
+- 👨‍💻Sean Sean (3rd-Year @ UM)
 
 ---
 ## Track & Problem Statement  
@@ -42,6 +42,11 @@ When users mistype or enter incorrect details (plate number, car model, year):
 ### 🔹 The Solution  
 Our system combines **instant SDK field validation** (frontend) with a **multi-stage backend API** for correction, ensuring smoother, faster, and more reliable insurance applications.  
 
+### Developer-First Design 🧑‍💻
+AutoValidate is built for plug-and-play integration, allowing developers to leverage a complex validation pipeline without deep expertise.
+- Lightweight SDK: A standalone JS/TS module for instant client-side validation.
+- API Integration: Standard HTTP requests return clean JSON, making it framework-agnostic.
+  
 ---
 
 ## ✨ Core Features  
@@ -53,38 +58,36 @@ The SDK ensures **bad data never reaches the backend** by enforcing instant clie
 - **IC Number** → Regex format `YYMMDD-XX-XXXX`, real-time validation.  
 - **Car Number Plate** → Country-specific regex (e.g., `ABC 1234`, `WXX 123`).  
 
-👉 Prevents garbage data entry and **cuts down wasted API calls by up to 90%**.  
-
 ---
 
 ### 2. API – Validation & Correction (Backend Layer)  
-- [API-Backend Repository](https://github.com/Shawnchee/vehicle-insurance-backend-api.git)
+- [Backend-API Repo](https://github.com/Shawnchee/AutoValidate-Backend-API)
 
 A **multi-stage intelligence pipeline** validates and corrects vehicle details:  
 
 #### ✅ Step 1: Direct Database Lookup (Supabase)  
-- Query authoritative DB (brands, models, year ranges).  
+- Query authoritative DB (brands, models).  
 - Known typo-corrections instantly fixed (`Toyata` → `Toyota`).  
 - ⚡ Millisecond response time.  
 
-#### 🔍 Step 2: Embeddings + Vector Search (Qdrant/Weaviate)  
-- For unseen typos → convert input into embeddings (`all-MiniLM-L6-v2`).  
+#### 🔍 Step 2: Embeddings + Vector Search (Qdrant)  
+- For unseen typos → convert input into embeddings (HF Embedding Model).  
 - Vector similarity search in Qdrant.  
-- Retrieve **top-5 candidates**, reranker narrows to **final top-3**.  
+- Retrieve **top-10 candidates**, reranker narrows to **final top-3**.  
 
 #### 📄 Step 3: VOC Biasing (Optional)  
 - If user uploads **Vehicle Ownership Certificate (VOC)**:  
-  - OCR extracts brand, model, year.  
+  - OCR extracts brand, model, manufactured year.  
   - Bias weighting applied → prioritize results closer to official document.  
 
 ---
 
 ### 3. Reinforcement & Continuous Learning  
-We built a **closed-loop feedback engine** powered by Airflow:  
+We built a **closed-loop feedback engine** powered by Airflow / Cron Job:  
 
-- Collects user feedback (accepted/rejected suggestions).  
+- Collects user feedback (suggestions selected choices).  
 - Fine-tunes reranker → smarter corrections each day.  
-- Expands typo-correction DB automatically.  
+- Expands typo-correction DB automatically (seeding).  
 
 💡 The system **gets better the more it’s used**, with zero manual upkeep.  
 
@@ -117,13 +120,14 @@ flowchart TD
 
 ## 🚀 Tech Stack  
 
-- **Frontend**: SDK (JS/TS) with Regex Validation  
+- **Frontend**: SDK (JS/TS) with Regex Validation (Logic + Rule-Based Validation)
 - **Backend**: FastAPI / Node.js  
-- **Database**: Supabase (authoritative DB)  
+- **Database**: Supabase 
 - **Vector DB**: Qdrant / Weaviate  
-- **ML Models**: `all-MiniLM-L6-v2` (embeddings), custom reranker  
+- **Embedding Models**: HF Model (TBC)
+- **Cross-Encoder Reranker**: Qwen / Jina / HF Reranker
 - **Pipelines**: Apache Airflow  
-- **OCR**: Tesseract / EasyOCR for VOC  
+- **OCR**: Tesseract VOC Extraction (optional)
 
 ---
 
