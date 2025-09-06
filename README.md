@@ -2,7 +2,8 @@
 ---
 
 ## 👥 Team Members  
-
+👨‍💻Shawn Chee
+👨‍💻Sean Sean
 
 ---
 ## Track & Problem Statement  
@@ -57,6 +58,7 @@ The SDK ensures **bad data never reaches the backend** by enforcing instant clie
 ---
 
 ### 2. API – Validation & Correction (Backend Layer)  
+- [API-Backend Repository](https://github.com/Shawnchee/vehicle-insurance-backend-api.git)
 
 A **multi-stage intelligence pipeline** validates and corrects vehicle details:  
 
@@ -124,8 +126,4 @@ flowchart TD
 - **OCR**: Tesseract / EasyOCR for VOC  
 
 ---
-
-## 🔗 Repository  
-
-- [API-Bankend Repository](https://github.com/Shawnchee/vehicle-insurance-backend-api.git)
 
