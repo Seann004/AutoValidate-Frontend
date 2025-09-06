@@ -508,7 +508,7 @@ export function VehicleDetailsStep({ formData, updateFormData }: VehicleDetailsS
 
       {/* Vehicle Year */}
       <div className="space-y-2">
-        <Label htmlFor="vehicleYear">Vehicle Year</Label>
+        <Label htmlFor="vehicleYear">Vehicle Manufactured Year</Label>
         <Input
           id="vehicleYear"
           value={formData.yearManufactured || ""}
