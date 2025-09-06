@@ -95,6 +95,7 @@ We built a **closed-loop feedback engine** powered by Airflow / Cron Job:
 
 ### 4. End-to-End Data Flow  
 
+```
 flowchart TD
     A[Frontend SDK] -->|Blocks Invalid Formats| B[API Call]
     B --> C[Supabase Lookup]
@@ -106,7 +107,7 @@ flowchart TD
     D --> H[User Feedback Stored]
     G --> H
     H --> I[Airflow Retraining]
-
+```
 ---
 
 ## 5. Why This Approach Works  
@@ -128,6 +129,7 @@ flowchart TD
 - **Cross-Encoder Reranker**: Qwen / Jina / HF Reranker
 - **Pipelines**: Apache Airflow  
 - **OCR**: Tesseract VOC Extraction (optional)
+- **Monitoring**: TBC
 
 ---
 
