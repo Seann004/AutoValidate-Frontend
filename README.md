@@ -2,8 +2,8 @@
 ---
 
 ## 👥 Team Members  
-👨‍💻Shawn Chee
-👨‍💻Sean Sean
+- 👨‍💻Shawn Chee
+- 👨‍💻Sean Sean
 
 ---
 ## Track & Problem Statement  
