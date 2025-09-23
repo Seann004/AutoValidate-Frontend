@@ -1,12 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import VocUploadPage from "@/components/page/voc-upload-page"
 import VehicleDetailsPage from "@/components/page/vehicle-details-page"
 import PersonalDetailsPage from "@/components/page/personal-details-page"
 
 export default function InsuranceForm() {
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
+    // VOC upload
+    vocFile: null,
     // Vehicle details
     registrationNumber: "",
     ownerNric: "",
@@ -24,7 +27,7 @@ export default function InsuranceForm() {
   })
 
   const handleNext = () => {
-    if (currentStep < 2) {
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -42,9 +45,12 @@ export default function InsuranceForm() {
   return (
     <>
       {currentStep === 1 && (
-        <VehicleDetailsPage formData={formData} onNext={handleNext} onBack={handleBack} onUpdateData={updateFormData} />
+        <VocUploadPage formData={formData} onNext={handleNext} onBack={handleBack} onUpdateData={updateFormData} />
       )}
       {currentStep === 2 && (
+        <VehicleDetailsPage formData={formData} onNext={handleNext} onBack={handleBack} onUpdateData={updateFormData} />
+      )}
+      {currentStep === 3 && (
         <PersonalDetailsPage
           formData={formData}
           onNext={handleNext}

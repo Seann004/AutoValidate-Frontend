@@ -17,21 +17,16 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
   }
 
   const handleSubmit = () => {
-    // Handle form submission logic here
     console.log("Form submitted:", formData)
-    // You can add validation and API calls here
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white px-4 py-3 border-b">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-blue-600 text-left">BJAK</h1>
+          <h1 className="text-3xl font-bold text-blue-600 text-left">BJAK Demo</h1>
         </div>
       </div>
-
-      {/* Progress Steps */}
       <div className="bg-white px-4 py-6 border-b">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
@@ -39,12 +34,19 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
               <div className="w-8 h-8 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center text-sm font-medium mb-2">
                 1
               </div>
+              <span className="text-base text-gray-500">VOC Upload</span>
+            </div>
+            <div className="flex-1 h-px bg-blue-600 mx-4"></div>
+            <div className="flex flex-col items-center">
+              <div className="w-8 h-8 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center text-sm font-medium mb-2">
+                2
+              </div>
               <span className="text-base text-gray-500">Vehicle Info</span>
             </div>
             <div className="flex-1 h-px bg-blue-600 mx-4"></div>
             <div className="flex flex-col items-center">
               <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium mb-2">
-                2
+                3
               </div>
               <span className="text-base text-blue-600 font-medium">Personal Info</span>
             </div>
@@ -52,19 +54,14 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="px-8 py-10">
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm p-10">
-          {/* Back Button */}
           <button onClick={onBack} className="flex items-center text-gray-600 mb-6 text-base hover:text-gray-800">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </button>
 
-          {/* Form Title */}
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Step 2: Personal Details</h2>
-
-          {/* Owner's Name */}
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Step 3: Personal Details</h2>
           <div className="mb-4">
             <label className="block text-base font-medium text-gray-900 mb-2">
               Owner's Name <span className="text-red-500">*</span>
@@ -76,7 +73,6 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
             />
           </div>
 
-          {/* Promo Code */}
           <div className="mb-6">
             <label className="block text-base font-medium text-gray-900 mb-2">Promo Code</label>
             <Input
@@ -87,12 +83,10 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
             />
           </div>
 
-          {/* Quote Section Header */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 underline">Done! We will send you a Quote</h3>
           </div>
 
-          {/* Email */}
           <div className="mb-4">
             <label className="block text-base font-medium text-gray-900 mb-2">
               Email <span className="text-red-500">*</span>
@@ -105,7 +99,6 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
             />
           </div>
 
-          {/* WhatsApp Number */}
           <div className="mb-4">
             <label className="block text-base font-medium text-gray-900 mb-2">
               Whatsapp Number <span className="text-red-500">*</span>
@@ -118,7 +111,6 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
             />
           </div>
 
-          {/* Postcode for Cover Note */}
           <div className="mb-6">
             <label className="block text-base font-medium text-gray-900 mb-2">
               Postcode for Cover Note <span className="text-red-500">*</span>
@@ -130,8 +122,6 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
               className="w-full"
             />
           </div>
-
-          {/* Checkboxes */}
           <div className="mb-8 space-y-3">
             <div className="flex items-start gap-3">
               <input
@@ -175,7 +165,6 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
             </div>
           </div>
 
-          {/* Get Quote Button */}
           <Button onClick={handleSubmit} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-base">
             Get Quote
           </Button>
