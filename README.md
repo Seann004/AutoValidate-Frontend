@@ -26,7 +26,7 @@ Build a smart system that **detects and corrects typos or inaccurate vehicle inp
 ---
 
 ## 🎞️ Presentation & Demo  
-📽️ **Video Demo:** [Watch on YouTube](https://youtu.be/your-demo-link)  
+📽️ **Video Demo:** [Watch on YouTube](https://youtu.be/_4tIUqdBEhg)  
 🖥️ **Pitching Slides:** [View Pitch Deck](https://drive.google.com/file/d/14r2BA8vEM3UCE0CVZe8r1d0jY8e___Bt/view?usp=drivesdk)  
 
 ---
