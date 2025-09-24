@@ -16,12 +16,14 @@ const Button = ({
   onClick,
   className = "",
   children,
+  disabled = false,
 }: {
   variant?: "default" | "outline" | "ghost"
   size?: "default" | "sm"
   onClick?: () => void
   className?: string
   children: React.ReactNode
+  disabled?: boolean
 }) => {
   const baseStyles =
     "px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -33,9 +35,14 @@ const Button = ({
   }
 
   const sizeStyles = size === "sm" ? "px-3 py-1 text-sm" : ""
+  const disabledStyles = disabled ? "opacity-50 cursor-not-allowed" : ""
 
   return (
-    <button onClick={onClick} className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles} ${className}`}>
+    <button 
+      onClick={onClick} 
+      className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles} ${disabledStyles} ${className}`}
+      disabled={disabled}
+    >
       {children}
     </button>
   )
@@ -80,6 +87,13 @@ const CheckCircle = ({ className }: { className?: string }) => (
   </svg>
 )
 
+const Loader = ({ className }: { className?: string }) => (
+  <svg className={`animate-spin ${className}`} fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+)
+
 const ArrowLeft = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -88,7 +102,8 @@ const ArrowLeft = ({ className }: { className?: string }) => (
 
 interface VocUploadPageProps {
   formData: {
-    vocFile: File | null
+    vocFile: File | null;
+    sessionId?: string;
   }
   onNext: () => void
   onBack: () => void
@@ -109,6 +124,8 @@ const ERROR_MESSAGES = {
 export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }: VocUploadPageProps) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadError, setUploadError] = useState("")
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const validateFile = (file: File): string | null => {
     if (file.size > FILE_CONSTRAINTS.maxSize) {
@@ -121,6 +138,52 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
 
     return null
   }
+
+  const uploadToServer = async (file: File) => {
+    try {
+      setIsUploading(true);
+      setUploadProgress(10);
+      
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      
+      // If we have a session ID already, use it
+      if (formData.sessionId) {
+        uploadFormData.append('session_id', formData.sessionId);
+      }
+      
+      setUploadProgress(30);
+      
+      const response = await fetch('/api/upload-voc', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+      
+      setUploadProgress(80);
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setUploadProgress(100);
+      
+      // Save the session ID returned from the server
+      onUpdateData({ 
+        vocFile: file,
+        sessionId: result.session_id
+      });
+      
+      setTimeout(() => {
+        setIsUploading(false);
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error uploading VOC:', error);
+      setUploadError('Failed to upload file. Please try again.');
+      setIsUploading(false);
+    }
+  };
 
   const handleFileUpload = useCallback(
     (files: FileList | null) => {
@@ -135,7 +198,7 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
       }
 
       setUploadError("")
-      onUpdateData({ vocFile: file })
+      uploadToServer(file);
     },
     [onUpdateData],
   )
@@ -160,7 +223,7 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
   }, [])
 
   const removeFile = () => {
-    onUpdateData({ vocFile: null })
+    onUpdateData({ vocFile: null, sessionId: undefined })
     setUploadError("")
   }
 
@@ -207,6 +270,7 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
         accept={FILE_CONSTRAINTS.allowedExtensions}
         onChange={(e) => handleFileUpload(e.target.files)}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        disabled={isUploading}
       />
 
       <Button
@@ -214,8 +278,9 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
         className={`pointer-events-none transition-all duration-300 ${
           isDragOver ? "bg-blue-100 border-blue-300 text-blue-600" : "bg-white"
         }`}
+        disabled={isUploading}
       >
-        {isDragOver ? "Drop File" : "Choose File"}
+        {isDragOver ? "Drop File" : isUploading ? "Uploading..." : "Choose File"}
       </Button>
 
       {isDragOver && (
@@ -254,6 +319,27 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
       </div>
     )
   }
+
+  const renderUploading = () => {
+    if (!isUploading) return null;
+    
+    return (
+      <div className="animate-in slide-in-from-top-2 duration-500 p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
+        <div className="flex items-center space-x-3">
+          <Loader className="h-6 w-6 text-blue-600" />
+          <div className="flex-1">
+            <p className="font-medium text-blue-800">Uploading and processing document...</p>
+            <div className="w-full h-2 bg-blue-200 rounded-full mt-2 overflow-hidden">
+              <div 
+                className="h-full bg-blue-600 rounded-full transition-all duration-300" 
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderError = () =>
     uploadError && (
@@ -312,7 +398,9 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
 
             <Card className="border-2 border-dashed border-gray-200">
               <CardContent className="p-8">
-                {!formData.vocFile ? renderUploadZone() : renderUploadedFile()}
+                {!formData.vocFile && !isUploading && renderUploadZone()}
+                {isUploading && renderUploading()}
+                {formData.vocFile && !isUploading && renderUploadedFile()}
                 {renderError()}
               </CardContent>
             </Card>
@@ -321,7 +409,10 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
           <div className="mt-8">
             <button
               onClick={onNext}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium text-base transition-colors"
+              disabled={isUploading}
+              className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium text-base transition-colors ${
+                isUploading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               Next Step
             </button>
