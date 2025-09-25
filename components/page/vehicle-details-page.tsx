@@ -449,29 +449,6 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
             <button className="text-blue-600 text-base underline block">I want to insure a Company Vehicle</button>
           </div>
 
-          <div className="mb-4">
-            <label className="block text-base font-medium text-gray-900 mb-2">
-              Vehicle Owner's NRIC <span className="text-red-500">*</span>
-            </label>
-            <p className="text-sm text-blue-600 mb-3">
-              Your IC Number is required to retrieve your KCU (No-Claim Discount)
-            </p>
-            <Input
-              value={formData.ownerNric}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("ownerNric", e.target.value)}
-              className="w-full"
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-base font-medium text-gray-900 mb-2">Police IC / Army IC (if applicable)</label>
-            <Input
-              value={formData.policeIc}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("policeIc", e.target.value)}
-              placeholder="RFXXXXX"
-              className="w-full"
-            />
-          </div>
 
           <div className="mb-8 bg-gray-50 p-4 rounded-lg">
             <h3 className="text-lg font-medium text-gray-900 mb-3">E-Hailing</h3>
