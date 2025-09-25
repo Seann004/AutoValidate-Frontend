@@ -4,6 +4,25 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft } from "lucide-react"
 
+// Import the autovalidator-sdk
+import InputValidator from 'autovalidator-sdk';
+import { useEffect } from 'react';
+
+// Register a custom validator for phone number
+InputValidator.registerValidator('phoneNumber', {
+    allowedChars: /[0-9]/,
+    maxLength: 12,
+    transform: (value) => {
+        const digits = value.replace(/\D/g, '');
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 10) return digits.slice(0, 3) + '-' + digits.slice(3);
+        return digits.slice(0, 3) + '-' + digits.slice(3, 11);
+    },
+    pattern: /^\d{3}-\d{7,8}$/,
+    keypressError: "Only numbers are allowed",
+    validationError: "Phone number must follow XXX-XXXXXXX format (10-11 digits)"
+});
+
 interface PersonalDetailsPageProps {
   formData: any
   onNext: () => void
@@ -15,6 +34,23 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
   const handleInputChange = (field: string, value: string | boolean) => {
     onUpdateData({ [field]: value })
   }
+
+
+
+  useEffect(() => {
+    const emailInput = document.getElementById('email') as HTMLInputElement | null;
+    if (emailInput) {
+      InputValidator.validateEmail(emailInput);
+    }
+    const postcodeInput = document.getElementById('postcode') as HTMLInputElement | null;
+    if (postcodeInput) {
+      InputValidator.validatePostcode(postcodeInput);
+    }
+    const phoneInput = document.getElementById('phoneNumber') as HTMLInputElement | null;
+    if (phoneInput) {
+      InputValidator.applyCustomValidator(phoneInput, 'phoneNumber');
+    }
+  }, []);
 
   const handleSubmit = () => {
     console.log("Form submitted:", formData)
@@ -67,6 +103,7 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
               Owner's Name <span className="text-red-500">*</span>
             </label>
             <Input
+              id="ownerName"
               value={formData.ownerName}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("ownerName", e.target.value)}
               className="w-full"
@@ -76,6 +113,7 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
           <div className="mb-6">
             <label className="block text-base font-medium text-gray-900 mb-2">Promo Code</label>
             <Input
+              id="promoCode"
               value={formData.promoCode}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("promoCode", e.target.value)}
               placeholder="XXX"
@@ -93,6 +131,7 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
             </label>
             <p className="text-sm text-blue-600 mb-3">A Quote will be sent to your Email in 5 minutes!</p>
             <Input
+              id="email"
               value={formData.email}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("email", e.target.value)}
               className="w-full"
@@ -105,8 +144,10 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
             </label>
             <p className="text-sm text-blue-600 mb-3">Please provide WhatsApp phone number to receive quote</p>
             <Input
-              value={formData.whatsappNumber}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("whatsappNumber", e.target.value)}
+              id="phoneNumber"
+              type="tel"
+              value={formData.phoneNumber}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("phoneNumber", e.target.value)}
               className="w-full"
             />
           </div>
@@ -117,6 +158,7 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
             </label>
             <p className="text-sm text-blue-600 mb-3">Note: Your quotation price is based on your postcode</p>
             <Input
+              id="postcode"
               value={formData.postcode}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("postcode", e.target.value)}
               className="w-full"
