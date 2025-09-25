@@ -659,7 +659,7 @@ useEffect(() => {
             </div>
           )}
           {yearRange.year_start && yearRange.year_end && !yearError && (
-            <div className="mt-1.5 text-xs text-gray-500">
+            <div className="mt-1.5 text-xs text-red-500">
               Valid years for {formData.carBrand} {formData.carModel}: {yearRange.year_start} - {yearRange.year_end}
             </div>
           )}
