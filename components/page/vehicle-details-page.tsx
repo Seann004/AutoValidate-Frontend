@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Loader2, FileText, CheckCircle } from "lucide-react"
+import { ArrowLeft, Loader2, FileText, CheckCircle, AlertCircle, X } from "lucide-react"
 
 interface SearchResult {
   text: string;
   score?: number;
   distance?: number;
+  isFromVOC?: boolean;
 }
 
 interface SearchResponse {
@@ -21,6 +22,11 @@ interface SearchResponse {
     manufactured_year: string;
     voc_valid: boolean;
   };
+}
+
+interface ManufacturedYearRange {
+  year_start?: number;
+  year_end?: number;
 }
 
 interface VehicleDetailsPageProps {
@@ -40,78 +46,222 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
   const [justSelectedBrand, setJustSelectedBrand] = useState(false);
   const [justSelectedModel, setJustSelectedModel] = useState(false);
   const [vocDataFields, setVocDataFields] = useState<string[]>([]);
+  const [yearRange, setYearRange] = useState<ManufacturedYearRange>({});
+  const [loadingYearRange, setLoadingYearRange] = useState(false);
+  const [yearError, setYearError] = useState<string | null>(null);
+  const [hasCheckedYearRange, setHasCheckedYearRange] = useState(false);
+  const [vocData, setVocData] = useState<{
+  carBrand: string;
+  carModel: string;
+  manufacturedYear: string;
+}>({ carBrand: '', carModel: '', manufacturedYear: '' });
+
+const capitalizeFirstLetter = (text: string): string => {
+  if (!text) return '';
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+};
 
   const handleInputChange = (field: string, value: string | boolean) => {
     // Reset the corresponding flag when typing in the field
     if (field === "carBrand" && typeof value === "string" && value !== formData.carBrand) {
       setJustSelectedBrand(false);
+      setYearRange({});
+      setHasCheckedYearRange(false);
     }
     if (field === "carModel" && typeof value === "string" && value !== formData.carModel) {
       setJustSelectedModel(false);
+      setYearRange({});
+      setHasCheckedYearRange(false);
+    }
+
+    if (field === "manufacturedYear" && typeof value === "string") {
+      // If we haven't checked year range yet and we have brand and model data
+      if (!hasCheckedYearRange && formData.carBrand && formData.carModel) {
+        fetchYearRange();
+        setHasCheckedYearRange(true);
+      }
+      validateManufacturedYear(value);
     }
     
     onUpdateData({ [field]: value })
   }
 
   const detectBrandTypo = async (query: string) => {
-    if (!query || query.length < 2) {
-      setBrandSuggestions([]);
-      setShowBrandSuggestions(false);
+  if (!query || query.length < 2) {
+    // Always show VOC data suggestion if available, even with short query
+    if (vocData.carBrand && vocDataFields.includes('carBrand')) {
+      setBrandSuggestions([{ text: vocData.carBrand, isFromVOC: true }]);
+      setShowBrandSuggestions(true);
       return;
     }
+    
+    setBrandSuggestions([]);
+    setShowBrandSuggestions(false);
+    return;
+  }
 
-    try {
-      setLoadingBrand(true);
-      const response = await fetch(`/api/detect/brand/${encodeURIComponent(query)}`, {
-        method: 'GET',
-      });
+  try {
+    setLoadingBrand(true);
+    const response = await fetch(`/api/detect/brand/${encodeURIComponent(query)}`, {
+      method: 'GET',
+    });
 
-      if (response.ok) {
-        const data: SearchResponse = await response.json();
-        setBrandSuggestions(data.results);
-        setShowBrandSuggestions(data.results.length > 0);
+    if (response.ok) {
+      const data: SearchResponse = await response.json();
+      
+      let suggestions = [...data.results];
+      
+      // Always add VOC data at the top of suggestions if it exists
+      if (vocData.carBrand && vocDataFields.includes('carBrand')) {
+        // Check if VOC brand is not already in the suggestions
+        const vocExists = suggestions.some(s => 
+          s.text.toLowerCase() === vocData.carBrand.toLowerCase()
+        );
+        
+        if (!vocExists) {
+          suggestions = [
+            { text: vocData.carBrand, isFromVOC: true },
+            ...suggestions
+          ];
+        } else {
+          // If it exists, mark it as from VOC
+          suggestions = suggestions.map(s => 
+            s.text.toLowerCase() === vocData.carBrand.toLowerCase() 
+              ? { ...s, isFromVOC: true }
+              : s
+          );
+        }
+      }
+      
+      setBrandSuggestions(suggestions);
+      setShowBrandSuggestions(suggestions.length > 0);
+    } else {
+      console.error("Failed to fetch brand suggestions");
+      
+      // Still show VOC suggestion if available
+      if (vocData.carBrand && vocDataFields.includes('carBrand')) {
+        setBrandSuggestions([{ text: vocData.carBrand, isFromVOC: true }]);
+        setShowBrandSuggestions(true);
       } else {
-        console.error("Failed to fetch brand suggestions");
         setBrandSuggestions([]);
         setShowBrandSuggestions(false);
       }
-    } catch (error) {
-      console.error("Error fetching brand suggestions:", error);
+    }
+  } catch (error) {
+    console.error("Error fetching brand suggestions:", error);
+    
+    // Still show VOC suggestion if available
+    if (vocData.carBrand && vocDataFields.includes('carBrand')) {
+      setBrandSuggestions([{ text: vocData.carBrand, isFromVOC: true }]);
+      setShowBrandSuggestions(true);
+    } else {
       setBrandSuggestions([]);
       setShowBrandSuggestions(false);
-    } finally {
-      setLoadingBrand(false);
     }
-  };
+  } finally {
+    setLoadingBrand(false);
+  }
+};
 
-  const detectModelTypo = async (query: string) => {
-    if (!query || query.length < 2) {
-      setModelSuggestions([]);
-      setShowModelSuggestions(false);
+// Updated detectModelTypo function
+const detectModelTypo = async (query: string) => {
+  if (!query || query.length < 2) {
+    // Always show VOC data suggestion if available, even with short query
+    if (vocData.carModel && vocDataFields.includes('carModel')) {
+      setModelSuggestions([{ text: vocData.carModel, isFromVOC: true }]);
+      setShowModelSuggestions(true);
       return;
     }
+    
+    setModelSuggestions([]);
+    setShowModelSuggestions(false);
+    return;
+  }
 
-    try {
-      setLoadingModel(true);
-      const response = await fetch(`/api/detect/model/${encodeURIComponent(query)}`, {
-        method: 'GET',
-      });
+  try {
+    setLoadingModel(true);
+    const response = await fetch(`/api/detect/model/${encodeURIComponent(query)}`, {
+      method: 'GET',
+    });
 
-      if (response.ok) {
-        const data: SearchResponse = await response.json();
-        setModelSuggestions(data.results);
-        setShowModelSuggestions(data.results.length > 0);
+    if (response.ok) {
+      const data: SearchResponse = await response.json();
+      
+      let suggestions = [...data.results];
+      
+      // Always add VOC data at the top of suggestions if it exists
+      if (vocData.carModel && vocDataFields.includes('carModel')) {
+        // Check if VOC model is not already in the suggestions
+        const vocExists = suggestions.some(s => 
+          s.text.toLowerCase() === vocData.carModel.toLowerCase()
+        );
+        
+        if (!vocExists) {
+          suggestions = [
+            { text: vocData.carModel, isFromVOC: true },
+            ...suggestions
+          ];
+        } else {
+          // If it exists, mark it as from VOC
+          suggestions = suggestions.map(s => 
+            s.text.toLowerCase() === vocData.carModel.toLowerCase() 
+              ? { ...s, isFromVOC: true }
+              : s
+          );
+        }
+      }
+      
+      setModelSuggestions(suggestions);
+      setShowModelSuggestions(suggestions.length > 0);
+    } else {
+      console.error("Failed to fetch model suggestions");
+      
+      // Still show VOC suggestion if available
+      if (vocData.carModel && vocDataFields.includes('carModel')) {
+        setModelSuggestions([{ text: vocData.carModel, isFromVOC: true }]);
+        setShowModelSuggestions(true);
       } else {
-        console.error("Failed to fetch model suggestions");
         setModelSuggestions([]);
         setShowModelSuggestions(false);
       }
-    } catch (error) {
-      console.error("Error fetching model suggestions:", error);
+    }
+  } catch (error) {
+    console.error("Error fetching model suggestions:", error);
+    
+    // Still show VOC suggestion if available
+    if (vocData.carModel && vocDataFields.includes('carModel')) {
+      setModelSuggestions([{ text: vocData.carModel, isFromVOC: true }]);
+      setShowModelSuggestions(true);
+    } else {
       setModelSuggestions([]);
       setShowModelSuggestions(false);
-    } finally {
-      setLoadingModel(false);
+    }
+  } finally {
+    setLoadingModel(false);
+  }
+};
+
+  const validateManufacturedYear = (yearValue: string) => {
+    if (!yearValue) {
+      setYearError(null);
+      return;
+    }
+
+    const year = parseInt(yearValue);
+    
+    if (isNaN(year)) {
+      setYearError("Please enter a valid year");
+      return;
+    }
+
+    if (yearRange.year_start && yearRange.year_end) {
+      if (year < yearRange.year_start || year > yearRange.year_end) {
+        setYearError(`Manufactured Year must be between ${yearRange.year_start} and ${yearRange.year_end}`);
+      } else {
+        setYearError(null);
+      }
+    } else {
+      setYearError(null);
     }
   };
 
@@ -168,53 +318,91 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
     setShowModelSuggestions(false);
   };
 
-  // Fetch VOC data when component mounts if session_id exists
-  useEffect(() => {
-    const fetchVocData = async () => {
-      if (formData.sessionId) {
-        try {
-          const response = await fetch('/api/search', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              query: "",
-              domain: "BRAND",
-              session_id: formData.sessionId
-            }),
-          });
+  // Move fetchYearRange to be a named function in the component
+  const fetchYearRange = async () => {
+    if (formData.carBrand && formData.carModel) {
+      try {
+        setLoadingYearRange(true);
+        const response = await fetch('/api/get-manufactured-year-range', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            car_brand: formData.carBrand,
+            car_model: formData.carModel
+          }),
+        });
 
-          if (response.ok) {
-            const data: SearchResponse = await response.json();
-            
-            // If we have VOC data, populate the form fields
-            if (data.voc_result && data.voc_result.voc_valid) {
-              const { car_brand, car_model, manufactured_year } = data.voc_result;
-              const updatedFields = [];
-              
-              if (car_brand) updatedFields.push('carBrand');
-              if (car_model) updatedFields.push('carModel');
-              if (manufactured_year) updatedFields.push('manufacturedYear');
-              
-              onUpdateData({
-                carBrand: car_brand || formData.carBrand,
-                carModel: car_model || formData.carModel,
-                manufacturedYear: manufactured_year || formData.manufacturedYear
-              });
-              
-              // Track which fields came from VOC
-              setVocDataFields(updatedFields);
-            }
+        if (response.ok) {
+          const data: ManufacturedYearRange = await response.json();
+          setYearRange(data);
+          
+          // Re-validate the current year value with the new range
+          if (formData.manufacturedYear) {
+            validateManufacturedYear(formData.manufacturedYear);
           }
-        } catch (error) {
-          console.error("Error fetching VOC data:", error);
+        } else {
+          console.error("Failed to fetch year range");
+          setYearRange({});
         }
+      } catch (error) {
+        console.error("Error fetching year range:", error);
+        setYearRange({});
+      } finally {
+        setLoadingYearRange(false);
       }
-    };
+    }
+  };
 
-    fetchVocData();
-  }, [formData.sessionId]);
+  // Update the useEffect for fetching VOC data
+useEffect(() => {
+  const fetchVocData = async () => {
+    if (formData.sessionId) {
+      try {
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: "",
+            domain: "brand", 
+            session_id: formData.sessionId
+          }),
+        });
+
+        if (response.ok) {
+          const data: SearchResponse = await response.json();
+          
+          // If we have VOC data, store it for later use in suggestions
+          if (data.voc_result && data.voc_result.voc_valid) {
+            const { car_brand, car_model, manufactured_year } = data.voc_result;
+            const updatedFields = [];
+            
+            if (car_brand) updatedFields.push('carBrand');
+            if (car_model) updatedFields.push('carModel');
+            if (manufactured_year) updatedFields.push('manufacturedYear');
+            
+            // Only track which fields came from VOC
+            setVocDataFields(updatedFields);
+            
+            // Store VOC data with proper capitalization
+            setVocData({
+              carBrand: capitalizeFirstLetter(car_brand || ''),
+              carModel: capitalizeFirstLetter(car_model || ''),
+              manufacturedYear: manufactured_year || ''
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching VOC data:", error);
+      }
+    }
+  };
+
+  fetchVocData();
+}, [formData.sessionId]);
 
   // Debounce function for brand input
   useEffect(() => {
@@ -252,13 +440,6 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
     return (score * 100).toFixed(0) + '%';
   }
 
-  // VOC badge component
-  const VocBadge = () => (
-    <div className="inline-flex items-center px-2 py-1 ml-2 rounded-md bg-green-50 border border-green-200">
-      <FileText className="h-3.5 w-3.5 text-green-600 mr-1" />
-      <span className="text-xs font-medium text-green-700">Direct from VOC</span>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -303,132 +484,187 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
 
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Step 2: Vehicle Details</h2>
           
-          {formData.sessionId && vocDataFields.length > 0 && (
-            <div className="mb-6 bg-green-50 border border-green-100 rounded-lg p-4 animate-in fade-in duration-300">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-green-800">VOC Data Retrieved Successfully</h3>
-                  <div className="mt-1 text-sm text-green-700">
-                    <p>We've pre-filled some information based on your VOC document.</p>
-                  </div>
+          {/* Car Brand */}
+        <div className="mb-4">
+          <label className="text-base font-medium text-gray-900 mb-2 block">
+            Car Brand <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <Input
+              value={formData.carBrand || ""}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("carBrand", e.target.value)}
+              className="w-full" // Remove special styling
+              placeholder="e.g., Toyota, Honda, BMW"
+            />
+            {loadingBrand && (
+              <div className="absolute right-3 top-2">
+                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              </div>
+            )}
+            
+            {showBrandSuggestions && brandSuggestions.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in-50 duration-200">
+                <div className="py-1 max-h-60 overflow-auto">
+      <div className="px-3 py-2 text-xs text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 font-semibold flex items-center justify-between">
+        <span>Suggestions</span>
+        <button 
+          onClick={() => {
+            setShowBrandSuggestions(false);
+            setBrandSuggestions([]);
+          }}
+          className="text-gray-400 hover:text-gray-600"
+          aria-label="Close suggestions"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+                  {brandSuggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-100 last:border-b-0 ${
+                        suggestion.isFromVOC ? 'bg-green-50 border-l-4 border-l-green-500' : ''
+                      }`}
+                      onClick={() => selectBrandSuggestion(suggestion.text)}
+                    >
+                      <div className="flex items-center">
+                        {suggestion.isFromVOC ? (
+                          <FileText className="h-4 w-4 text-green-600 mr-2" />
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2.5"></div>
+                        )}
+                        <span className={suggestion.isFromVOC ? 'font-medium text-green-800' : 'font-medium'}>
+                          {suggestion.text}
+                          {suggestion.isFromVOC && (
+                            <span className="ml-2 text-xs text-green-700">(VOC)</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Car Brand */}
-          <div className="mb-4">
-            <label className="flex items-center text-base font-medium text-gray-900 mb-2">
-              <span>Car Brand <span className="text-red-500">*</span></span>
-              {vocDataFields.includes('carBrand') && <VocBadge />}
-            </label>
-            <div className="relative">
-              <Input
-                value={formData.carBrand || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("carBrand", e.target.value)}
-                className={`w-full ${vocDataFields.includes('carBrand') ? 'border-green-500 bg-green-50 ring-green-200 focus-visible:ring-green-300' : ''}`}
-                placeholder="e.g., Toyota, Honda, BMW"
-              />
-              {loadingBrand && (
-                <div className="absolute right-3 top-2">
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                </div>
-              )}
-              
-              {showBrandSuggestions && brandSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in-50 duration-200">
-                  <div className="py-1 max-h-60 overflow-auto">
-                    <div className="px-3 py-2 text-xs text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 font-semibold">
-                      Suggestions
-                    </div>
-                    {brandSuggestions.map((suggestion, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-100 last:border-b-0"
-                        onClick={() => selectBrandSuggestion(suggestion.text)}
-                      >
-                        <div className="flex items-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2.5"></div>
-                          <span className="font-medium">{suggestion.text}</span>
-                        </div>
-                        {suggestion.score && (
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                            {formatConfidence(suggestion.score)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
+        </div>
           
-          {/* Car Model */}
-          <div className="mb-4">
-            <label className="flex items-center text-base font-medium text-gray-900 mb-2">
-              <span>Car Model <span className="text-red-500">*</span></span>
-              {vocDataFields.includes('carModel') && <VocBadge />}
-            </label>
-            <div className="relative">
-              <Input
-                value={formData.carModel || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("carModel", e.target.value)}
-                className={`w-full ${vocDataFields.includes('carModel') ? 'border-green-500 bg-green-50 ring-green-200 focus-visible:ring-green-300' : ''}`}
-                placeholder="e.g., Camry, Civic, X5"
-              />
-              {loadingModel && (
-                <div className="absolute right-3 top-2">
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                </div>
-              )}
-              
-              {showModelSuggestions && modelSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in-50 duration-200">
-                  <div className="py-1 max-h-60 overflow-auto">
-                    <div className="px-3 py-2 text-xs text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 font-semibold">
-                      Suggestions
-                    </div>
-                    {modelSuggestions.map((suggestion, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-100 last:border-b-0"
-                        onClick={() => selectModelSuggestion(suggestion.text)}
-                      >
-                        <div className="flex items-center">
+           {/* Car Model */}
+        <div className="mb-4">
+          <label className="text-base font-medium text-gray-900 mb-2 block">
+            Car Model <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <Input
+              value={formData.carModel || ""}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("carModel", e.target.value)}
+              className="w-full" // Remove special styling
+              placeholder="e.g., Camry, Civic, X5"
+            />
+            {loadingModel && (
+              <div className="absolute right-3 top-2">
+                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              </div>
+            )}
+            
+            {showModelSuggestions && modelSuggestions.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg animate-in fade-in-50 duration-200">
+                <div className="py-1 max-h-60 overflow-auto">
+                  <div className="px-3 py-2 text-xs text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 font-semibold flex items-center justify-between">
+        <span>Suggestions</span>
+        <button 
+          onClick={() => {
+            setShowModelSuggestions(false);
+            setModelSuggestions([]);
+          }}
+          className="text-gray-400 hover:text-gray-600"
+          aria-label="Close suggestions"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+                  {modelSuggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-700 border-b border-gray-100 last:border-b-0 ${
+                        suggestion.isFromVOC ? 'bg-green-50 border-l-4 border-l-green-500' : ''
+                      }`}
+                      onClick={() => selectModelSuggestion(suggestion.text)}
+                    >
+                      <div className="flex items-center">
+                        {suggestion.isFromVOC ? (
+                          <FileText className="h-4 w-4 text-green-600 mr-2" />
+                        ) : (
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2.5"></div>
-                          <span className="font-medium">{suggestion.text}</span>
-                        </div>
-                        {suggestion.score && (
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                            {formatConfidence(suggestion.score)}
-                          </span>
                         )}
+                        <span className={suggestion.isFromVOC ? 'font-medium text-green-800' : 'font-medium'}>
+                          {suggestion.text}
+                          {suggestion.isFromVOC && (
+                            <span className="ml-2 text-xs text-green-700">(VOC)</span>
+                          )}
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-          
-          {/* Manufactured Year */}
-          <div className="mb-6">
-            <label className="flex items-center text-base font-medium text-gray-900 mb-2">
-              <span>Manufactured Year <span className="text-red-500">*</span></span>
-              {vocDataFields.includes('manufacturedYear') && <VocBadge />}
-            </label>
+        </div>
+        
+        {/* Manufactured Year */}
+        <div className="mb-6">
+          <label className="text-base font-medium text-gray-900 mb-2 block">
+            Manufactured Year <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
             <Input
               value={formData.manufacturedYear || ""}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("manufacturedYear", e.target.value)}
-              className={`w-full ${vocDataFields.includes('manufacturedYear') ? 'border-green-500 bg-green-50 ring-green-200 focus-visible:ring-green-300' : ''}`}
-              placeholder="e.g., 2020"
-              type="number"
+              className={`w-full ${yearError ? 'border-red-500 ring-red-200 focus-visible:ring-red-300' : ''}`}
+              placeholder={yearRange.year_start && yearRange.year_end 
+                ? `Between ${yearRange.year_start} and ${yearRange.year_end}` 
+                : "e.g., 2020"
+              }
             />
+            {loadingYearRange && (
+              <div className="absolute right-3 top-2">
+                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              </div>
+            )}
           </div>
+
+          {/* Show VOC year as a suggestion if available and not already selected */}
+          {vocData.manufacturedYear && 
+           vocDataFields.includes('manufacturedYear') && 
+           formData.manufacturedYear !== vocData.manufacturedYear && (
+            <div className="mt-2 bg-green-50 border border-green-100 rounded p-2 flex items-center justify-between animate-in slide-in-from-top duration-300">
+              <div className="flex items-center">
+                <FileText className="h-4 w-4 text-green-600 mr-2" />
+                <span className="text-sm text-green-800">
+                  Year from VOC: <span className="font-medium">{vocData.manufacturedYear}</span>
+                </span>
+              </div>
+              <button
+                onClick={() => handleInputChange("manufacturedYear", vocData.manufacturedYear)}
+                className="text-xs font-medium px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
+              >
+                Use this
+              </button>
+            </div>
+          )}
+          
+          {yearError && (
+            <div className="mt-2 flex items-center text-sm text-red-600">
+              <AlertCircle className="h-4 w-4 mr-1.5 flex-shrink-0" />
+              <span>{yearError}</span>
+            </div>
+          )}
+          {yearRange.year_start && yearRange.year_end && !yearError && (
+            <div className="mt-1.5 text-xs text-gray-500">
+              Valid years for {formData.carBrand} {formData.carModel}: {yearRange.year_start} - {yearRange.year_end}
+            </div>
+          )}
+        </div>
+
 
           {/* Rest of your form fields remain unchanged */}
           <div className="mb-4">

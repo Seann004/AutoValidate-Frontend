@@ -4,6 +4,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    // Skip API call if no query and no session_id
+    if (!body.query && !body.session_id) {
+      return NextResponse.json({ results: [] });
+    }
+    
     // Call your backend API to search
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/search`, {
       method: 'POST',
@@ -19,8 +24,10 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
-    console.error('Error searching:', error);
-    return NextResponse.json({ error: 'Failed to search' }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: 'Failed to search', details: error.message }, 
+      { status: 500 }
+    );
   }
 }

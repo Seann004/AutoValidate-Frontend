@@ -1,6 +1,6 @@
 "use client"
 import type React from "react"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 
 const Card = ({ className = "", children }: { className?: string; children: React.ReactNode }) => (
   <div className={`border rounded-lg shadow-sm bg-white ${className}`}>{children}</div>
@@ -87,6 +87,17 @@ const CheckCircle = ({ className }: { className?: string }) => (
   </svg>
 )
 
+const Clock = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+)
+
 const Loader = ({ className }: { className?: string }) => (
   <svg className={`animate-spin ${className}`} fill="none" viewBox="0 0 24 24">
     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -104,6 +115,9 @@ interface VocUploadPageProps {
   formData: {
     vocFile: File | null;
     sessionId?: string;
+    car_brand?: string | null;
+    car_model?: string | null;
+    manufactured_year?: string | null;
   }
   onNext: () => void
   onBack: () => void
@@ -126,6 +140,27 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
   const [uploadError, setUploadError] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  
+  // New states for background processing
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [processingStatus, setProcessingStatus] = useState("")
+  const [processingComplete, setProcessingComplete] = useState(false)
+  const [dots, setDots] = useState('.');
+  
+  // Move the dots effect to component level
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isProcessing) {
+      interval = setInterval(() => {
+        setDots(prev => prev.length >= 3 ? '.' : prev + '.');
+      }, 500);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessing]);
 
   const validateFile = (file: File): string | null => {
     if (file.size > FILE_CONSTRAINTS.maxSize) {
@@ -139,51 +174,80 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
     return null
   }
 
-  const uploadToServer = async (file: File) => {
-    try {
-      setIsUploading(true);
-      setUploadProgress(10);
-      
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-      
-      // If we have a session ID already, use it
-      if (formData.sessionId) {
-        uploadFormData.append('session_id', formData.sessionId);
-      }
-      
-      setUploadProgress(30);
-      
-      const response = await fetch('/api/upload-voc', {
-        method: 'POST',
-        body: uploadFormData,
-      });
-      
-      setUploadProgress(80);
-      
-      if (!response.ok) {
-        throw new Error(`Upload failed with status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      setUploadProgress(100);
-      
-      // Save the session ID returned from the server
-      onUpdateData({ 
-        vocFile: file,
-        sessionId: result.session_id
-      });
-      
-      setTimeout(() => {
-        setIsUploading(false);
-      }, 500);
-      
-    } catch (error) {
-      console.error('Error uploading VOC:', error);
-      setUploadError('Failed to upload file. Please try again.');
-      setIsUploading(false);
+  // Updated uploadToServer function
+const uploadToServer = async (file: File) => {
+  try {
+    setIsUploading(true);
+    setUploadProgress(10);
+    
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
+    
+    // If we have a session ID already, use it
+    if (formData.sessionId) {
+      uploadFormData.append('session_id', formData.sessionId);
     }
-  };
+    
+    setUploadProgress(30);
+    
+    const response = await fetch('/api/upload-voc', {
+      method: 'POST',
+      body: uploadFormData,
+    });
+    
+    setUploadProgress(80);
+    
+    if (!response.ok) {
+      throw new Error(`Upload failed with status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    setUploadProgress(100);
+    console.log('Upload successful:', result);
+    
+    // First, just save the session ID and file
+    onUpdateData({ 
+      vocFile: file,
+      sessionId: result.session_id
+    });
+    
+    // Show uploading complete, then switch to processing
+    setTimeout(() => {
+      setIsUploading(false);
+      setIsProcessing(true);
+      setProcessingStatus("Analyzing document with Gemini...");
+      
+      // After 3 seconds, update processing message
+      setTimeout(() => {
+        setProcessingStatus("Extracting vehicle information...");
+        
+        // After another 3 seconds, update again
+        setTimeout(() => {
+          setProcessingStatus("Finalizing data extraction...");
+          
+          // After 2 more seconds, complete processing and update car details
+          setTimeout(() => {
+            // Now update the data with car details
+            onUpdateData({ 
+              car_brand: result.car_brand || null,
+              car_model: result.car_model || null,
+              manufactured_year: result.manufactured_year || null,
+            });
+            
+            setIsProcessing(false);
+            setProcessingComplete(true);
+            setProcessingStatus("Document analysis complete!");
+          }, 2000);
+        }, 3000);
+      }, 3000);
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error uploading VOC:', error);
+    setUploadError('Failed to upload file. Please try again.');
+    setIsUploading(false);
+  }
+};
 
   const handleFileUpload = useCallback(
     (files: FileList | null) => {
@@ -225,6 +289,9 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
   const removeFile = () => {
     onUpdateData({ vocFile: null, sessionId: undefined })
     setUploadError("")
+    setIsProcessing(false)
+    setProcessingComplete(false)
+    setProcessingStatus("")
   }
 
   const formatFileSize = (bytes: number): string => {
@@ -240,6 +307,8 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
 
     return `${baseClasses} ${dragClasses}`
   }
+
+  
 
   const renderUploadZone = () => (
     <div className={getDragZoneClasses()} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}>
@@ -270,7 +339,7 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
         accept={FILE_CONSTRAINTS.allowedExtensions}
         onChange={(e) => handleFileUpload(e.target.files)}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        disabled={isUploading}
+        disabled={isUploading || isProcessing}
       />
 
       <Button
@@ -278,7 +347,7 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
         className={`pointer-events-none transition-all duration-300 ${
           isDragOver ? "bg-blue-100 border-blue-300 text-blue-600" : "bg-white"
         }`}
-        disabled={isUploading}
+        disabled={isUploading || isProcessing}
       >
         {isDragOver ? "Drop File" : isUploading ? "Uploading..." : "Choose File"}
       </Button>
@@ -292,20 +361,44 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
   const renderUploadedFile = () => {
     if (!formData.vocFile) return null
 
+    const getStatusIcon = () => {
+      if (processingComplete) {
+        return <CheckCircle className="h-6 w-6 text-green-600 animate-in zoom-in duration-300" />
+      } else if (isProcessing) {
+        return <Loader className="h-6 w-6 text-blue-600" />
+      }
+      return <FileText className="h-6 w-6 text-blue-600" />
+    }
+
+    const getStatusColor = () => {
+      if (processingComplete) return "bg-green-50 border-green-200"
+      if (isProcessing) return "bg-blue-50 border-blue-200"
+      return "bg-gray-50 border-gray-200"
+    }
+
+    const getStatusText = () => {
+      if (processingComplete) return "text-green-800"
+      if (isProcessing) return "text-blue-800"
+      return "text-gray-800"
+    }
+
     return (
-      <div className="animate-in slide-in-from-top-2 duration-500 flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg shadow-sm">
+      <div className={`animate-in slide-in-from-top-2 duration-500 flex items-center justify-between p-4 rounded-lg shadow-sm ${getStatusColor()}`}>
         <div className="flex items-center space-x-3">
           <div className="relative">
-            <CheckCircle className="h-6 w-6 text-green-600 animate-in zoom-in duration-300" />
-            <div className="absolute inset-0 rounded-full bg-green-600 animate-ping opacity-25" />
+            {getStatusIcon()}
+            {processingComplete && <div className="absolute inset-0 rounded-full bg-green-600 animate-ping opacity-25" />}
           </div>
-          <FileText className="h-8 w-8 text-blue-600" />
           <div>
-            <p className="font-medium text-green-800">{formData.vocFile.name}</p>
-            <p className="text-sm text-green-600">{formatFileSize(formData.vocFile.size)} MB</p>
-            <div className="w-32 h-1 bg-green-200 rounded-full mt-1 overflow-hidden">
-              <div className="h-full bg-green-500 rounded-full animate-in slide-in-from-left duration-700" />
-            </div>
+            <p className={`font-medium ${getStatusText()}`}>{formData.vocFile.name}</p>
+            <p className={`text-sm ${getStatusText().replace('800', '600')}`}>
+              {formatFileSize(formData.vocFile.size)} MB
+            </p>
+            {(isProcessing || processingComplete) && (
+              <p className={`text-xs mt-1 ${getStatusText().replace('800', '600')}`}>
+                {processingStatus}
+              </p>
+            )}
           </div>
         </div>
         <Button
@@ -313,6 +406,7 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
           size="sm"
           onClick={removeFile}
           className="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors duration-200"
+          disabled={isProcessing}
         >
           <X className="h-4 w-4" />
         </Button>
@@ -328,12 +422,104 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
         <div className="flex items-center space-x-3">
           <Loader className="h-6 w-6 text-blue-600" />
           <div className="flex-1">
-            <p className="font-medium text-blue-800">Uploading and processing document...</p>
+            <p className="font-medium text-blue-800">Uploading document...</p>
             <div className="w-full h-2 bg-blue-200 rounded-full mt-2 overflow-hidden">
               <div 
                 className="h-full bg-blue-600 rounded-full transition-all duration-300" 
                 style={{ width: `${uploadProgress}%` }}
               />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderExtractedData = () => {
+  if (!processingComplete) return null;
+  
+  return (
+    <div className="mt-4 animate-in fade-in duration-500">
+      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="flex items-start space-x-3">
+          <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+          <div>
+            <p className="font-medium text-green-800">Document Processed Successfully</p>
+            <p className="text-sm text-green-700 mt-1">
+              We've extracted vehicle information from your document. You'll see this information pre-filled in the next steps.
+            </p>
+            
+            <div className="mt-3 pt-3 border-t border-green-200">
+              {/* Car Details Section */}
+              {(formData.car_brand || formData.car_model || formData.manufactured_year) && (
+                <div className="mb-3">
+                  <p className="text-xs text-green-600 font-medium mb-2">EXTRACTED INFORMATION</p>
+                  
+                  <div className="grid grid-cols-3 gap-3">
+                    {formData.car_brand && (
+                      <div className="bg-green-100/50 p-2 rounded">
+                        <p className="text-xs text-green-700 font-medium">BRAND</p>
+                        <p className="text-sm text-green-900 font-medium">{formData.car_brand}</p>
+                      </div>
+                    )}
+                    
+                    {formData.car_model && (
+                      <div className="bg-green-100/50 p-2 rounded">
+                        <p className="text-xs text-green-700 font-medium">MODEL</p>
+                        <p className="text-sm text-green-900 font-medium">{formData.car_model}</p>
+                      </div>
+                    )}
+                    
+                    {formData.manufactured_year && (
+                      <div className="bg-green-100/50 p-2 rounded">
+                        <p className="text-xs text-green-700 font-medium">MANUFACTURED YEAR</p>
+                        <p className="text-sm text-green-900 font-medium">{formData.manufactured_year}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Status Information */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-xs text-green-600 font-medium">STATUS</p>
+                  <p className="text-sm text-green-800">Ready</p>
+                </div>
+                <div>
+                  <p className="text-xs text-green-600 font-medium">SESSION ID</p>
+                  <p className="text-sm text-green-800 font-mono">{formData.sessionId?.substring(0, 8)}...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const renderProcessing = () => {
+    if (!isProcessing) return null;
+    
+    return (
+      <div className="mt-4 animate-in slide-in-from-top duration-300">
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center space-x-3">
+            <div className="relative flex-shrink-0">
+              <Loader className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-blue-800">
+                {processingStatus}<span className="inline-block w-8 text-left">{dots}</span>
+              </p>
+              <div className="w-full h-1.5 bg-blue-100 rounded-full mt-2 overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full animate-pulse" 
+                     style={{ width: '100%', animationDuration: '1.5s' }} />
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                Extracting vehicle data from your document. This may take a moment.
+              </p>
             </div>
           </div>
         </div>
@@ -398,25 +584,45 @@ export default function VocUploadPage({ formData, onNext, onBack, onUpdateData }
 
             <Card className="border-2 border-dashed border-gray-200">
               <CardContent className="p-8">
-                {!formData.vocFile && !isUploading && renderUploadZone()}
-                {isUploading && renderUploading()}
-                {formData.vocFile && !isUploading && renderUploadedFile()}
-                {renderError()}
-              </CardContent>
+  {!formData.vocFile && !isUploading && renderUploadZone()}
+  {isUploading && renderUploading()}
+  {formData.vocFile && !isUploading && !isProcessing && renderUploadedFile()}
+  {isProcessing && renderProcessing()}
+  {processingComplete && renderExtractedData()}
+  {renderError()}
+</CardContent>
             </Card>
           </div>
 
-          <div className="mt-8">
-            <button
-              onClick={onNext}
-              disabled={isUploading}
-              className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium text-base transition-colors ${
-                isUploading ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-            >
-              Next Step
-            </button>
-          </div>
+<div className="mt-8">
+  <button
+    onClick={onNext}
+    disabled={isUploading || isProcessing}
+    className={`w-full ${
+      processingComplete 
+        ? "bg-blue-600 hover:bg-blue-700" 
+        : isProcessing || isUploading 
+          ? "bg-gray-400 cursor-not-allowed" 
+          : "bg-blue-600 hover:bg-blue-700"
+    } text-white py-3 rounded-lg font-medium text-base transition-colors ${
+      (isUploading || isProcessing) ? "opacity-50" : ""
+    }`}
+  >
+    {processingComplete ? "Next Step" : isProcessing ? "Processing..." : isUploading ? "Uploading..." : "Next Step"}
+  </button>
+  
+  {isProcessing && (
+    <p className="text-xs text-gray-500 text-center mt-2">
+      Please wait while we process your document. This usually takes a few seconds.
+    </p>
+  )}
+  
+  {!formData.vocFile && !isUploading && !isProcessing && !processingComplete && (
+    <p className="text-xs text-gray-500 text-center mt-2">
+      You can skip this step if you don't have a VOC document to upload.
+    </p>
+  )}
+</div>
         </div>
       </div>
     </div>
