@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, Loader2, FileText, CheckCircle, AlertCircle, X } from "lucide-react"
 
+// Import the autovalidator-sdk
+import InputValidator from 'autovalidator-sdk';
+
 interface SearchResult {
   text: string;
   score?: number;
@@ -58,6 +61,11 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
   const [showValidationModal, setShowValidationModal] = useState(false);
 
   useEffect(() => {
+    const carPlateInput = document.getElementById('carPlate') as HTMLInputElement | null;
+      if (carPlateInput) {
+        InputValidator.validateCarPlate(carPlateInput);
+      }
+
     if (formData.sessionId) {
       setShowValidationModal(true);
       
@@ -66,6 +74,7 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
       }, 4000);
       
       return () => clearTimeout(timer);
+
     }
   }, []);
 
@@ -693,13 +702,14 @@ useEffect(() => {
         </div>
 
 
-          {/* Rest of your form fields remain unchanged */}
+          
           <div className="mb-4">
             <label className="block text-base font-medium text-gray-900 mb-2">
               What's your Vehicle Registration Number? <span className="text-red-500">*</span>
             </label>
             <p className="text-sm text-gray-500 mb-3">Private-owned vehicle only.</p>
             <Input
+              id="carPlate"
               value={formData.registrationNumber}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("registrationNumber", e.target.value)}
               className="w-full"
