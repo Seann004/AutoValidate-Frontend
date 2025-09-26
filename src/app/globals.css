@@ -1,4 +1,7 @@
-@import "tailwindcss";
+/* Add these Tailwind directives instead */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Color scheme definitions */
 :root {
