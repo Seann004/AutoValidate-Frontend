@@ -36,7 +36,7 @@ export default function PersonalDetailsPage({ formData, onNext, onBack, onUpdate
   }
 
 
-
+// Initialize validators on component mount
   useEffect(() => {
     const emailInput = document.getElementById('email') as HTMLInputElement | null;
     if (emailInput) {
