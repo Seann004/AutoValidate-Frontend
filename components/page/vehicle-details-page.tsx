@@ -60,6 +60,7 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
 }>({ carBrand: '', carModel: '', manufacturedYear: '' });
   const [showValidationModal, setShowValidationModal] = useState(false);
 
+  //Applied car plate validation on component mount
   useEffect(() => {
     const carPlateInput = document.getElementById('carPlate') as HTMLInputElement | null;
       if (carPlateInput) {
