@@ -55,6 +55,19 @@ export default function VehicleDetailsPage({ formData, onNext, onBack, onUpdateD
   carModel: string;
   manufacturedYear: string;
 }>({ carBrand: '', carModel: '', manufacturedYear: '' });
+  const [showValidationModal, setShowValidationModal] = useState(false);
+
+  useEffect(() => {
+    if (formData.sessionId) {
+      setShowValidationModal(true);
+      
+      const timer = setTimeout(() => {
+        setShowValidationModal(false);
+      }, 4000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
 const capitalizeFirstLetter = (text: string): string => {
   if (!text) return '';
@@ -443,6 +456,20 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {showValidationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-center flex-col space-y-4">
+              <div className="p-2">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+              <p className="text-lg font-medium text-center text-gray-800">
+                Validating information from your Vehicle Ownership Certificate...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="bg-white px-4 py-3 border-b">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-blue-600 text-left">BJAK Demo</h1>
