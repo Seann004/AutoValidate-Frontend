@@ -12,7 +12,7 @@ This frontend allows developers and testers to interact with the **SDK** for cli
 
 ---
 ## Test out the **SDK and API directly**:  
-👉 [AUtoValidate Frontend](https://autovalidate-api-demo.vercel.app/)  
+👉 [AutoValidate Frontend](https://autovalidate-api-demo.vercel.app/)  
 
 You can try all the validation scenarios, input testing, and document processing features there.  
 
