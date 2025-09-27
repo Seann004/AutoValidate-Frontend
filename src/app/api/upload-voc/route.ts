@@ -7,6 +7,9 @@ export async function POST(request: NextRequest) {
     // Forward the request to your backend API
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload-voc`, {
       method: 'POST',
+      headers: {
+         "x-api-key": process.env.SSS_API_KEY || "",
+      },
       body: formData,
     });
 

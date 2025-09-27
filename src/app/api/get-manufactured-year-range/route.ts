@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                 "x-api-key": process.env.SSS_API_KEY || "",
             },
             body: JSON.stringify({
                 car_brand: body.car_brand,
