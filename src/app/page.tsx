@@ -29,8 +29,8 @@ export default function InsuranceForm() {
 
   const [showSplash, setShowSplash] = useState(true)
   const [apiKeyCopied, setApiKeyCopied] = useState(false)
-  const API_KEY = "xxx"
-  const DOCS_URL = "https://www.test.com"
+  const API_KEY = "judges-sss-autovalidate-key"
+  const DOCS_URL = "https://sss-45.gitbook.io/sss-docs/"
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -111,7 +111,7 @@ export default function InsuranceForm() {
                     <Copy className="h-3.5 w-3.5 text-white" />
                   </div>
                   <div>
-                    <p className="text-gray-800 font-medium text-sm">API Key</p>
+                    <p className="text-gray-800 font-medium text-sm">API Key (DO NOT SHARE OUT)</p>
                     <p className="text-xs text-gray-500 mt-1">API_KEY (check documentation how to use API KEY)</p>
                     <div className="flex items-center gap-2 mt-2">
                       <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono text-gray-800">
@@ -145,7 +145,7 @@ export default function InsuranceForm() {
                   <div>
                     <p className="text-gray-800 font-medium text-sm">Bug Reports</p>
                     <p className="text-xs text-gray-600 mt-1">
-                      If any bugs are found, please feel free to email: <span className="font-medium text-red-700">xxx</span>
+                      If any bugs are found, please feel free to email: <strong>shawnchee03@gmail.com / seanseanng04@gmail.com</strong>
                     </p>
                   </div>
                 </div>
