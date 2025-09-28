@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+         "x-api-key": process.env.SSS_API_KEY || "",
       },
       // Empty body since we're using query parameters
     });
