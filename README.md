@@ -128,8 +128,6 @@ flowchart TD
 - **Embedding Models**: HF Model (TBC)
 - **Cross-Encoder Reranker**: Qwen / Jina / HF Reranker
 - **Pipelines**: Apache Airflow  
-- **OCR**: Tesseract VOC Extraction (optional)
+- **OCR**: VLM (Vision-Language Model) VOC Extraction (optional)
 - **Monitoring**: TBC
-
----
 
