@@ -55,27 +55,6 @@ The frontend demonstrates:
 
 ---
 
-## 5. Why This Approach Works  
-
-- ⚡ **Speed** → SDK + Supabase instantly solve **80–90% of cases**.  
-- 🎯 **Accuracy** → Embeddings + reranker catch typos & semantic mismatches.  
-- 📄 **Adaptability** → VOC uploads bias results toward *real-world official documents*.  
-- 🔄 **Continuous Learning** → Airflow retrains daily, errors shrink over time.  
-
----
-
-## 🚀 Tech Stack  
-
-- **Frontend**: SDK (JS/TS) with Regex Validation (Logic + Rule-Based Validation)
-- **Backend**: FastAPI / Node.js  
-- **Database**: Supabase 
-- **Vector DB**: Qdrant / Weaviate  
-- **Embedding Models**: HF Model (TBC)
-- **Cross-Encoder Reranker**: Qwen / Jina / HF Reranker
-- **Pipelines**: Apache Airflow  
-- **OCR**: VLM (Vision-Language Model) VOC Extraction (optional)
-- **Monitoring**: TBC
-
 ## 💡 Notes  
 
 - Designed for **developers and testers** to explore all SDK and API functionality.  
